@@ -1,0 +1,250 @@
+
+
+
+
+
+
+
+Product.hasMany(Review, { as: "reviews", foreignKey: "productId" });
+Review.belongsTo(Product, { as: "product", foreignKey: "productId" });
+
+
+
+
+
+1. foreignKey
+
+The foreignKey tells Sequelize which column in the child table (Review) links back to the parent table (Product).
+
+👉 In this case:
+
+productId column exists in the reviews table.
+
+That column stores the id of the product it belongs to.
+
+So for example:
+
+Products table
+
+id	name
+1	Soap
+2	Pipe Wrench
+
+Reviews table
+
+id	productId	text
+1	1	"Very good soap"
+2	1	"Too small"
+3	2	"Strong tool"
+
+Here productId is the foreign key that connects Review → Product.
+
+
+
+
+
+
+
+
+2. as
+
+The as is just an alias (a label) that Sequelize uses to refer to the relationship.
+
+Product.hasMany(Review, { as: "reviews" }) → means when you include reviews, Sequelize will return them as product.reviews.
+
+Review.belongsTo(Product, { as: "product" }) → means when you include the product from a review, Sequelize will return it as review.product.
+
+If you don’t use as, Sequelize will try to guess the name (sometimes incorrectly, especially when you have multiple relations).
+
+
+
+
+
+SequelizeEagerLoadingError: Product is not associated to Review!
+
+
+
+
+4. Summary
+
+foreignKey → actual column in the database that links the tables (reviews.productId).
+
+as → alias used in Sequelize code to refer to the relationship (product.reviews or review.product).
+
+In your controller, Sequelize automatically fetches the reviews because you told it:
+
+There’s a hasMany relation (Product → Review).
+
+The foreign key is productId.
+
+The alias is reviews.
+
+
+
+
+
+
+What is a foreign key?
+
+A foreign key is a column in one table that points to the primary key of another table.
+
+It creates a relationship between two tables.
+
+Example in your case
+
+You have three models:
+
+1. User
+id (PK)  |  name   |  email
+---------|---------|----------
+1        | Alice   | alice@mail.com
+2        | Bob     | bob@mail.com
+
+2. Product
+id (PK)  |  name        |  price
+---------|--------------|---------
+10       | Phone        | 500
+11       | Laptop       | 1000
+
+3. Review
+id (PK)  |  comment       | rating | userId (FK) | productId (FK)
+---------|----------------|--------|-------------|--------------
+100      | "Great phone!" | 5      | 1           | 10
+101      | "Too costly"   | 3      | 2           | 11
+
+
+👉 Here:
+
+userId is a foreign key that points to User.id.
+
+productId is a foreign key that points to Product.id.
+
+That means:
+
+Review #100 was written by User #1 (Alice) about Product #10 (Phone).
+
+Review #101 was written by User #2 (Bob) about Product #11 (Laptop).
+
+
+
+
+
+
+
+
+
+
+1. 🧑 One-to-One (1:1)
+
+➡️ One record in a table is linked to one record in another table.
+
+Example:
+
+A User has one Profile.
+
+A Profile belongs to exactly one User.
+
+Sequelize:
+
+User.hasOne(Profile, { foreignKey: 'userId' });
+Profile.belongsTo(User, { foreignKey: 'userId' });
+
+
+Tables:
+
+Users        Profiles
+-----        --------
+id (PK)      id (PK)
+name         bio
+             userId (FK → Users.id)
+
+
+👉 userId in Profiles links each profile to one user.
+
+2. 📦 One-to-Many (1:N)
+
+➡️ One record in a table can be linked to many records in another table.
+
+Example:
+
+A Product can have many Reviews.
+
+Each Review belongs to exactly one Product.
+
+Sequelize:
+
+Product.hasMany(Review, { foreignKey: 'productId', as: 'reviews' });
+Review.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
+
+
+Tables:
+
+Products      Reviews
+--------      -------
+id (PK)       id (PK)
+name          comment
+              productId (FK → Products.id)
+
+
+👉 productId in Reviews links multiple reviews to one product.
+
+3. 🤝 Many-to-Many (M:N)
+
+➡️ A record in one table can be linked to many records in another table — and vice versa.
+
+Example:
+
+A User can buy many Products.
+
+A Product can be bought by many Users.
+
+You need a junction table (a middle table).
+
+Sequelize:
+
+User.belongsToMany(Product, { through: 'UserProducts', foreignKey: 'userId' });
+Product.belongsToMany(User, { through: 'UserProducts', foreignKey: 'productId' });
+
+
+Tables:
+
+Users         Products       UserProducts
+-----         --------       ------------
+id (PK)       id (PK)        userId (FK → Users.id)
+name          name           productId (FK → Products.id)
+
+
+👉 The UserProducts table holds connections between Users and Products.
+
+🚦 Quick Analogy (Real Life)
+
+One-to-One → A person has one passport.
+
+One-to-Many → A mother has many children.
+
+Many-to-Many → Students and classes (a student can join many classes, a class has many students).
+
+🛠️ How as and foreignKey fit in
+
+foreignKey → tells Sequelize what column links the tables.
+
+as → gives the relationship a readable name when fetching data.
+
+Example:
+
+Product.hasMany(Review, { foreignKey: 'productId', as: 'reviews' });
+
+
+foreignKey: 'productId' → Sequelize will look for productId in Review table.
+
+as: 'reviews' → you can later fetch like:
+
+const product = await Product.findByPk(1, { include: 'reviews' });
+
+
+✅ Summary Table
+
+Relationship	Example	Sequelize code
+One-to-One	User ↔ Profile	hasOne, belongsTo
+One-to-Many	Product ↔ Reviews	hasMany, belongsTo
+Many-to-Many	User ↔ Product (orders)	belongsToMany
